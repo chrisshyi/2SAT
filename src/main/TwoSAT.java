@@ -19,12 +19,14 @@ public class TwoSAT {
      */
     public static boolean evaluateClause(Map<Integer, Boolean> varMap, Clause clause) {
         int firstVar = clause.firstLiteral;
+//        System.out.println("first var is: " + firstVar);
         boolean varOne = varMap.get(Math.abs(firstVar));
         if (firstVar < 0) {
             varOne = !varOne;
         }
 
         int secondVar = clause.secondLiteral;
+//        System.out.println("second var is: " + secondVar);
         boolean varTwo = varMap.get(Math.abs(secondVar));
         if (secondVar < 0) {
             varTwo = !varTwo;
@@ -45,36 +47,53 @@ public class TwoSAT {
                                       Set<Clause> unsatisfiedClauses
             , Map<Integer, Set<Clause>> varToClause) {
         int numVar = varMap.size();
-        for (int i = 0; i < 2 * Math.pow(numVar, 2); i++) {
+        for (long i = 0; i < 2 * Math.pow(numVar, 2); i++) {
             System.out.printf("%d iteration of the inner loop, " +
                     "%d unsatisfied clauses left\n", i + 1, unsatisfiedClauses.size());
             if (unsatisfiedClauses.size() == 0) {
                 return true;
             }
             /*
-            ** Pick a random clause
+            ** Pick a random unsatisfied clause
              */
             Iterator<Clause> iterator = unsatisfiedClauses.iterator();
-            Clause randClause = iterator.next();
+            Clause randUnsatisfiedClause = iterator.next();
 
-            int randVar = Math.abs(randClause.getRandomLiteral());
+            int randVar = randUnsatisfiedClause.getRandomLiteral();
 
-            boolean oldVal = varMap.get(randVar);
+            boolean oldVal = varMap.get(Math.abs(randVar));
+            /* Flip the value of that random variable */
             varMap.put(randVar, !oldVal);
 
-            boolean newClauseVal = evaluateClause(varMap, randClause);
+            /* Update all the clauses associated with that variable */
+            boolean newClauseVal = evaluateClause(varMap, randUnsatisfiedClause);
             if (newClauseVal) {
-                unsatisfiedClauses.remove(randClause);
+                unsatisfiedClauses.remove(randUnsatisfiedClause);
             }
+            clauseMap.put(randUnsatisfiedClause, newClauseVal);
             /*
              * Re-evaluate all clauses that the randomly chosen variable is a part of
              */
             for (Clause clause : varToClause.get(randVar)) {
-                if (!evaluateClause(varMap, clause)) {
-                    unsatisfiedClauses.add(clause);
+                if (clauseMap.containsKey((clause))) {
+                    if (!evaluateClause(varMap, clause)) {
+                        unsatisfiedClauses.add(clause);
+                        clauseMap.put(clause, false);
+                    } else {
+                        clauseMap.put(clause, true);
+                    }
                 }
             }
-            clauseMap.put(randClause, newClauseVal);
+            for (Clause clause : varToClause.get(-randVar)) {
+                if (clauseMap.containsKey(clause)) {
+                    if (!evaluateClause(varMap, clause)) {
+                        unsatisfiedClauses.add(clause);
+                        clauseMap.put(clause, false);
+                    } else {
+                        clauseMap.put(clause, true);
+                    }
+                }
+            }
         }
         return false;
     }
@@ -110,19 +129,18 @@ public class TwoSAT {
 
                 Clause newClause = new Clause(literalOne, literalTwo);
                 if (!varToClause.containsKey(literalOne)) {
-                    Set<Clause> clauses = new HashSet<>();
-                    varToClause.put(literalOne, clauses);
+                    varToClause.put(literalOne, new HashSet<>());
                 }
                 varToClause.get(literalOne).add(newClause);
 
                 if (!varToClause.containsKey(literalTwo)) {
-                    Set<Clause> clauses = new HashSet<>();
-                    varToClause.put(literalTwo, clauses);
+                    varToClause.put(literalTwo, new HashSet<>());
                 }
                 varToClause.get(literalTwo).add(newClause);
 
-                allClauses.add(new Clause(literalOne, literalTwo));
+                allClauses.add(newClause);
             }
+
         } catch (IOException e) {
             e.printStackTrace();
             return false;
@@ -141,6 +159,22 @@ public class TwoSAT {
                 varMap.put(var, boolVal);
             }
             /*
+             ** Make a copy of the key set for varToClause for pruning
+             */
+            Set<Integer> copyOfKeys = new HashSet<>(varToClause.keySet());
+            for (Integer key : copyOfKeys) {
+                /*
+                 * If the key only exists in one form, then we can remove all its associated clauses
+                 * from consideration, since those clauses can easily be made true
+                 */
+                if (!varToClause.containsKey(-key)) {
+                    Set<Clause> clauses = varToClause.get(key);
+                    allClauses.removeAll(clauses);
+                    varToClause.remove(key);
+                    varMap.remove(key);
+                }
+            }
+            /*
              * Compute corresponding clause boolean values
              */
             for (Clause clause : allClauses) {
@@ -150,6 +184,7 @@ public class TwoSAT {
                     unsatisfiedClauses.add(clause);
                 }
             }
+
             /*
             ** Run Papadimitriou's algorithm
              */

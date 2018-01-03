@@ -21,7 +21,13 @@ class TwoSATTest {
     @Test
     void testSmallInput2() {
         File testFile = new File(System.getProperty("user.dir") + "/src/tests/test2.txt");
-        assertFalse(TwoSAT.solveTwoSAT(testFile));
+        assertTrue(!TwoSAT.solveTwoSAT(testFile));
+    }
+
+    @Test
+    void testSmallInput3() {
+        File testFile = new File(System.getProperty("user.dir") + "/src/tests/test3.txt");
+        assertTrue(TwoSAT.solveTwoSAT(testFile));
     }
 
     @Test
