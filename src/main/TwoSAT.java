@@ -1,3 +1,5 @@
+package main;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -15,7 +17,7 @@ public class TwoSAT {
      * @param clause the 2-SAT clause in question
      * @return true if the clause is satisfied, false if otherwise
      */
-    private static boolean evaluateClause(Map<Integer, Boolean> varMap, Clause clause) {
+    public static boolean evaluateClause(Map<Integer, Boolean> varMap, Clause clause) {
         int firstVar = clause.firstLiteral;
         boolean varOne = varMap.get(Math.abs(firstVar));
         if (firstVar < 0) {
@@ -40,7 +42,8 @@ public class TwoSAT {
      * @return true if the instance can be satisfied, false if otherwise
      */
     private static boolean papaTwoSAT(Map<Integer, Boolean> varMap, Map<Clause, Boolean> clauseMap,
-                                      Set<Clause> unsatisfiedClauses) {
+                                      Set<Clause> unsatisfiedClauses
+            , Map<Integer, Set<Clause>> varToClause) {
         int numVar = varMap.size();
         for (int i = 0; i < 2 * Math.pow(numVar, 2); i++) {
             System.out.printf("%d iteration of the inner loop, " +
@@ -63,6 +66,14 @@ public class TwoSAT {
             if (newClauseVal) {
                 unsatisfiedClauses.remove(randClause);
             }
+            /*
+             * Re-evaluate all clauses that the randomly chosen variable is a part of
+             */
+            for (Clause clause : varToClause.get(randVar)) {
+                if (!evaluateClause(varMap, clause)) {
+                    unsatisfiedClauses.add(clause);
+                }
+            }
             clauseMap.put(randClause, newClauseVal);
         }
         return false;
@@ -84,16 +95,31 @@ public class TwoSAT {
     public static boolean solveTwoSAT(File dataFile) {
         Set<Clause> allClauses = null;
         int numVars = 0;
+        Map<Integer, Set<Clause>> varToClause;
 
         try (BufferedReader br = new BufferedReader(new FileReader(dataFile))) {
             numVars = Integer.parseInt(br.readLine());
             allClauses = new HashSet<>(numVars);
+            varToClause = new HashMap<>(numVars);
 
             String line;
             while ((line = br.readLine()) != null) {
                 String[] splitLine = line.split(" ");
                 int literalOne = Integer.parseInt(splitLine[0]);
                 int literalTwo = Integer.parseInt(splitLine[1]);
+
+                Clause newClause = new Clause(literalOne, literalTwo);
+                if (!varToClause.containsKey(literalOne)) {
+                    Set<Clause> clauses = new HashSet<>();
+                    varToClause.put(literalOne, clauses);
+                }
+                varToClause.get(literalOne).add(newClause);
+
+                if (!varToClause.containsKey(literalTwo)) {
+                    Set<Clause> clauses = new HashSet<>();
+                    varToClause.put(literalTwo, clauses);
+                }
+                varToClause.get(literalTwo).add(newClause);
 
                 allClauses.add(new Clause(literalOne, literalTwo));
             }
@@ -127,7 +153,7 @@ public class TwoSAT {
             /*
             ** Run Papadimitriou's algorithm
              */
-            if (papaTwoSAT(varMap, clauseMap, unsatisfiedClauses)) {
+            if (papaTwoSAT(varMap, clauseMap, unsatisfiedClauses, varToClause)) {
                 return true;
             }
         }
