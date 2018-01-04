@@ -14,19 +14,19 @@ class PapaTwoSATTest {
 
     @Test
     void testSmallInput() {
-        File testFile = new File(System.getProperty("user.dir") + "/src/tests/test1.txt");
+        File testFile = new File(System.getProperty("user.dir") + "/src/tests/papa/test1.txt");
         assertTrue(PapaTwoSAT.solveTwoSAT(testFile));
     }
 
     @Test
     void testSmallInput2() {
-        File testFile = new File(System.getProperty("user.dir") + "/src/tests/test2.txt");
+        File testFile = new File(System.getProperty("user.dir") + "/src/tests/papa/test2.txt");
         assertTrue(!PapaTwoSAT.solveTwoSAT(testFile));
     }
 
     @Test
     void testSmallInput3() {
-        File testFile = new File(System.getProperty("user.dir") + "/src/tests/test3.txt");
+        File testFile = new File(System.getProperty("user.dir") + "/src/tests/papa/test3.txt");
         assertTrue(PapaTwoSAT.solveTwoSAT(testFile));
     }
 

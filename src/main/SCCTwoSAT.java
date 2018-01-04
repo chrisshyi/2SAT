@@ -4,17 +4,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Implements a solution to the 2-SAT problem by treating the problem as an implication graph.
  * Kosaraju's algorithm for finding strongly connected components (SCC) is then used to determine if the
  * 2-SAT instance is satisfiable.
  */
-public class  SCCTwoSAT {
+public class SCCTwoSAT {
     /**
      * The finishing time variable used in the first DFS pass of Kosaraju's algorithm
      */
@@ -46,17 +43,31 @@ public class  SCCTwoSAT {
      */
     public boolean outerDFSLoop(Map<Integer, Set<Integer>> graph, boolean firstPass) {
         if (firstPass) {
-            finishingTime = 0;
-            finishingTimeMap = new HashMap<>();
-            reverseFinishingTimeMap = new HashMap<>();
+            this.finishingTime = 0;
+            this.finishingTimeMap = new HashMap<>();
+            this.reverseFinishingTimeMap = new HashMap<>();
         } else {
-            leaderVariable = finishingTimeMap.size();
-            sccMap = new HashMap<>();
+//            this.leaderVariable = finishingTimeMap.size();
+            this.sccMap = new HashMap<>();
         }
+        /* Start and end vertices for the upcoming for loop */
+        int startVertex;
+        int endVertex;
+        SortedSet<Integer> sortedKeys;
+
+        if (firstPass) {
+            sortedKeys = new TreeSet<>(graph.keySet());
+        } else {
+            sortedKeys = new TreeSet<>(reverseFinishingTimeMap.keySet());
+        }
+        startVertex = sortedKeys.last();
+        endVertex = sortedKeys.first();
+
         Set<Integer> exploredNodes = new HashSet<>();
-        for (int i = leaderVariable; i >= 1; i--) {
-            if (!exploredNodes.contains(i)) {
-                leaderVariable = i;
+
+        for (int i = startVertex; i >= endVertex; i--) {
+            if (!exploredNodes.contains(i) && graph.containsKey(i)) {
+                this.leaderVariable = i;
                 if (!innerDFSLoop(graph, i, exploredNodes, firstPass)) {
                     return false;
                 }
@@ -68,9 +79,12 @@ public class  SCCTwoSAT {
     public boolean innerDFSLoop(Map<Integer, Set<Integer>> graph, int startVertex
             , Set<Integer> exploredNodes, boolean firstPass) {
         exploredNodes.add(startVertex);
-        for (int vertex : graph.get(startVertex)) {
-            if (!exploredNodes.contains(vertex)) {
-                innerDFSLoop(graph, vertex, exploredNodes, firstPass);
+        /* If the start vertex has any outgoing edges */
+        if (graph.containsKey(startVertex)) {
+            for (int vertex : graph.get(startVertex)) {
+                if (!exploredNodes.contains(vertex)) {
+                    innerDFSLoop(graph, vertex, exploredNodes, firstPass);
+                }
             }
         }
         if (firstPass) {
@@ -143,7 +157,7 @@ public class  SCCTwoSAT {
      * @param graph the graph as an adjacency list
      * @return the reversed graph as an adjacency list
      */
-    public Map<Integer, Set<Integer>> formReverseMap(Map<Integer, Set<Integer>> graph) {
+    public Map<Integer, Set<Integer>> formReverseGraph(Map<Integer, Set<Integer>> graph) {
         Map<Integer, Set<Integer>> reverseGraph = new HashMap<>();
         for (int key : graph.keySet()) {
             for (int vertex : graph.get(key)) {
@@ -154,5 +168,58 @@ public class  SCCTwoSAT {
             }
         }
         return reverseGraph;
+    }
+
+    /**
+     * Renumbers the vertices in a graph using their finishing times
+     * @param graph a graph as an adjacency list
+     * @return a new graph that is the old one renumbered
+     */
+    public Map<Integer, Set<Integer>> renumberVertices(Map<Integer, Set<Integer>> graph,
+                                                       Map<Integer, Integer> finishingTimeMap) {
+        Map<Integer, Set<Integer>> renumberedGraph = new HashMap<>();
+        for (int key : graph.keySet()) {
+            System.out.println("key: " + key);
+            int finishingTime = finishingTimeMap.get(key);
+            renumberedGraph.put(finishingTime, new HashSet<>());
+            for (int vertex : graph.get(key)) {
+                renumberedGraph.get(finishingTime).add(finishingTimeMap.get(vertex));
+            }
+        }
+        return renumberedGraph;
+    }
+
+    /**
+     * Computes the satisfiability of a 2-SAT instance
+     * @param file the 2-SAT data file
+     * @return true if satisfiable, false if otherwise
+     */
+    public boolean computeSatisfiability(File file) {
+        Map<Integer, Set<Integer>> graph = formTwoSATGraph(file);
+        Map<Integer, Set<Integer>> reverseGraph = formReverseGraph(graph);
+
+        outerDFSLoop(reverseGraph, true);
+        Map<Integer, Set<Integer>> renumberedGraph = renumberVertices(graph, this.finishingTimeMap);
+        return outerDFSLoop(renumberedGraph, false);
+    }
+
+    public static void main(String[] args) {
+        StringBuilder answerSb = new StringBuilder();
+
+        for (int i = 1; i <= 6; i++) {
+            /* Create file path string */
+            StringBuilder sb = new StringBuilder(System.getProperty("user.dir"));
+            sb.append(File.separator).append("data").append(File.separator).append("2sat").append(i).append(".txt");
+            File dataFile = new File(sb.toString());
+
+            SCCTwoSAT sccTwoSAT = new SCCTwoSAT();
+            System.out.println("File " + i);
+            if (sccTwoSAT.computeSatisfiability(dataFile)) {
+                answerSb.append("1");
+            } else {
+                answerSb.append("0");
+            }
+        }
+        System.out.printf("Final answer string: %s\n", answerSb.toString());
     }
 }
