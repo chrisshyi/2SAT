@@ -1,5 +1,9 @@
 package main;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -10,7 +14,7 @@ import java.util.Set;
  * Kosaraju's algorithm for finding strongly connected components (SCC) is then used to determine if the
  * 2-SAT instance is satisfiable.
  */
-public class SCCTwoSAT {
+public class  SCCTwoSAT {
     /**
      * The finishing time variable used in the first DFS pass of Kosaraju's algorithm
      */
@@ -77,8 +81,12 @@ public class SCCTwoSAT {
             if (!sccMap.containsKey(this.leaderVariable)) {
                 sccMap.put(this.leaderVariable, new HashSet<>());
             }
-            sccMap.get(this.leaderVariable).add(startVertex);
-            return sccMap.get(this.leaderVariable).contains(-startVertex);
+            /*
+             * Get the original vertex back using the reverse map for finishing times
+             */
+            int originalVertex = reverseFinishingTimeMap.get(startVertex);
+            sccMap.get(this.leaderVariable).add(originalVertex);
+            return sccMap.get(this.leaderVariable).contains(-originalVertex);
         }
         return true;
     }
@@ -93,5 +101,58 @@ public class SCCTwoSAT {
 
     public Map<Integer, Set<Integer>> getSccMap() {
         return sccMap;
+    }
+
+    /**
+     * Creates the implication graph of a 2-SAT instance
+     * @param file file containing the 2-SAT data
+     * @return the implication graph as an adjacency list
+     */
+    public Map<Integer, Set<Integer>> formTwoSATGraph(File file) {
+        Map<Integer, Set<Integer>> graph;
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            /* Consume the first line, which is just the number of literals in the 2-SAT instance */
+            br.readLine();
+            graph = new HashMap<>();
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                String[] splitLine = line.split(" ");
+                int firstLiteral = Integer.parseInt(splitLine[0]);
+                int secondLiteral = Integer.parseInt(splitLine[1]);
+
+                if (!graph.containsKey(-firstLiteral)) {
+                    graph.put(-firstLiteral, new HashSet<>());
+                }
+                graph.get(-firstLiteral).add(secondLiteral);
+
+                if (!graph.containsKey(-secondLiteral)) {
+                    graph.put(-secondLiteral, new HashSet<>());
+                }
+                graph.get(-secondLiteral).add(firstLiteral);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return graph;
+    }
+
+    /**
+     * Creates the reverse of a directed graph
+     * @param graph the graph as an adjacency list
+     * @return the reversed graph as an adjacency list
+     */
+    public Map<Integer, Set<Integer>> formReverseMap(Map<Integer, Set<Integer>> graph) {
+        Map<Integer, Set<Integer>> reverseGraph = new HashMap<>();
+        for (int key : graph.keySet()) {
+            for (int vertex : graph.get(key)) {
+                if (!reverseGraph.containsKey(vertex)) {
+                    reverseGraph.put(vertex, new HashSet<>());
+                }
+                reverseGraph.get(vertex).add(key);
+            }
+        }
+        return reverseGraph;
     }
 }
