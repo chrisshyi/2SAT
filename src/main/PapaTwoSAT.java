@@ -9,7 +9,7 @@ import java.util.*;
 /**
  * A solution to the 2-SAT problem using Papadimitriou's randomized algorithm
  */
-public class TwoSAT {
+public class PapaTwoSAT {
 
     /**
      * Evaluates a 2-SAT clause using a variable to boolean mapping
