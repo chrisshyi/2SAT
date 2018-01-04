@@ -22,6 +22,11 @@ public class SCCTwoSAT {
     private int leaderVariable;
 
     /**
+     * The number of variables in the 2-SAT instance
+     */
+    private int numVariables;
+
+    /**
      * Maps each vertex to its finishing time
      */
     private Map<Integer, Integer> finishingTimeMap;
@@ -56,17 +61,19 @@ public class SCCTwoSAT {
         SortedSet<Integer> sortedKeys;
 
         if (firstPass) {
-            sortedKeys = new TreeSet<>(graph.keySet());
+            startVertex = this.numVariables;
+            endVertex = -this.numVariables;
         } else {
             sortedKeys = new TreeSet<>(reverseFinishingTimeMap.keySet());
+            startVertex = sortedKeys.last();
+            endVertex = sortedKeys.first();
         }
-        startVertex = sortedKeys.last();
-        endVertex = sortedKeys.first();
+
 
         Set<Integer> exploredNodes = new HashSet<>();
 
         for (int i = startVertex; i >= endVertex; i--) {
-            if (!exploredNodes.contains(i) && graph.containsKey(i)) {
+            if (!exploredNodes.contains(i) && i != 0) {
                 this.leaderVariable = i;
                 if (!innerDFSLoop(graph, i, exploredNodes, firstPass)) {
                     return false;
@@ -76,6 +83,16 @@ public class SCCTwoSAT {
         return true;
     }
 
+    /**
+     * DFS inner subroutine for Kosaraju's SCC algorithm.
+     * Determines if a 2-SAT instance is satisfiable using its implication graph
+     * @param graph the implication graph of the 2-SAT instance in question
+     * @param startVertex the vertex from which DFS is to be started
+     * @param exploredNodes set of already explored nodes
+     * @param firstPass true if the graph being operated on is the reversed implication graph,
+     *                  which means this subroutine is working to determine finishing times
+     * @return false if the 2-SAT instance is not satisfiable, true if otherwise
+     */
     public boolean innerDFSLoop(Map<Integer, Set<Integer>> graph, int startVertex
             , Set<Integer> exploredNodes, boolean firstPass) {
         exploredNodes.add(startVertex);
@@ -100,7 +117,7 @@ public class SCCTwoSAT {
              */
             int originalVertex = reverseFinishingTimeMap.get(startVertex);
             sccMap.get(this.leaderVariable).add(originalVertex);
-            return sccMap.get(this.leaderVariable).contains(-originalVertex);
+            return !sccMap.get(this.leaderVariable).contains(-originalVertex);
         }
         return true;
     }
@@ -126,7 +143,7 @@ public class SCCTwoSAT {
         Map<Integer, Set<Integer>> graph;
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             /* Consume the first line, which is just the number of literals in the 2-SAT instance */
-            br.readLine();
+            this.numVariables = Integer.parseInt(br.readLine());
             graph = new HashMap<>();
             String line;
 
